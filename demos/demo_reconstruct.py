@@ -77,7 +77,8 @@ def main(args):
             if args.render_orig:
                 cv2.imwrite(os.path.join(savefolder, name + '_vis_original_size.jpg'), deca.visualize(orig_visdict))
         if args.saveImages:
-            for vis_name in ['inputs', 'rendered_images', 'albedo_images', 'shape_images', 'shape_detail_images', 'landmarks2d', 'landmarks3d', 'uv_face_eye_mask']:
+            for vis_name in ['inputs', 'rendered_images', 'albedo_images', 'shading_images', 'shape_images',
+                             'shape_detail_images', 'landmarks2d', 'landmarks3d']:
                 if vis_name not in visdict.keys():
                     continue
                 cv2.imwrite(os.path.join(savefolder, name, name + '_' + vis_name +'.jpg'), util.tensor2image(visdict[vis_name][0]))

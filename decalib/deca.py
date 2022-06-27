@@ -57,6 +57,8 @@ class DECA(nn.Module):
         self.uv_face_eye_mask = F.interpolate(mask, [model_cfg.uv_size, model_cfg.uv_size]).to(self.device)
         mask = imread(model_cfg.face_mask_path).astype(np.float32)/255.; mask = torch.from_numpy(mask[:,:,0])[None,None,:,:].contiguous()
         self.uv_face_mask = F.interpolate(mask, [model_cfg.uv_size, model_cfg.uv_size]).to(self.device)
+        mask = imread(model_cfg.eye_mask_path).astype(np.float32)/255.; mask = torch.from_numpy(mask[:,:,0])[None,None,:,:].contiguous()
+        self.uv_eye_mask = F.interpolate(mask, [model_cfg.uv_size, model_cfg.uv_size]).to(self.device)
         # displacement correction
         fixed_dis = np.load(model_cfg.fixed_displacement_path)
         self.fixed_uv_dis = torch.tensor(fixed_dis).float().to(self.device)
@@ -214,8 +216,9 @@ class DECA(nn.Module):
                 uv_z = self.D_detail(torch.cat([iddict['pose'][:,3:], iddict['exp'], codedict['detail']], dim=1))
             uv_detail_normals = self.displacement2normal(uv_z, verts, ops['normals'])
             uv_shading = self.render.add_SHlight(uv_detail_normals, codedict['light'])
-            uv_texture = albedo*uv_shading
-            # uv_texture = albedo
+            # uv_texture = albedo*uv_shading
+            ## deshading
+            uv_texture = albedo
 
             opdict['uv_texture'] = uv_texture 
             opdict['normals'] = ops['normals']
@@ -240,37 +243,46 @@ class DECA(nn.Module):
 
             if self.cfg.model.use_tex:
                 ## TODO: poisson blending should give better-looking results
-                # uv_gt_img = util.tensor2image(uv_gt[:, :3, :, :][0])
-                # uv_texture_img = util.tensor2image(uv_texture[:, :3, :, :][0])
-                # uv_face_eye_mask_img = util.tensor2image(self.uv_face_eye_mask[0])
-                # uv_texture_gt_img = cv2.seamlessClone(uv_gt_img, uv_texture_img, uv_face_eye_mask_img, (128, 128), cv2.MONOCHROME_TRANSFER)
-                # # uv_texture_gt_img = util.remove_light(uv_texture_gt_img)
-                # uv_texture_gt = util.image2tensor(cv2.cvtColor(uv_texture_gt_img, cv2.COLOR_BGR2RGB))
-                # uv_texture_gt = uv_texture_gt.unsqueeze(0).to(self.device)
-                image = images[0].cpu().numpy().transpose(1, 2, 0)
-                landmark = landmarks2d[0].detach().cpu().numpy()
-                uv_face_mask = util.get_image_hull_mask(image.shape, landmark)
-                uv_face_mask = uv_face_mask.astype(np.float32) / 255.
-                uv_face_mask = torch.from_numpy(uv_face_mask[:, :, 0])[None, None, :, :].contiguous()
-                uv_face_mask = F.interpolate(uv_face_mask, [uv_gt.shape[2], uv_gt.shape[3]]).to(self.device)
-                uv_eye_mask = uv_face_mask
-                uv_eye_mask[:,:,:48,:] = self.uv_face_eye_mask[:,:,:48,:]
-                uv_face_eye_mask = uv_face_mask + uv_eye_mask
-                uv_texture_gt = uv_gt[:, :3, :, :]*uv_face_eye_mask + (uv_texture[:,:3,:,:]*(1-uv_face_eye_mask))
+                ## blend
+                uv_gt_img = util.tensor2image(uv_gt[:, :3, :, :][0])
+                uv_texture_img = util.tensor2image(uv_texture[:, :3, :, :][0])
+                uv_face_eye_mask_img = util.tensor2image(self.uv_face_eye_mask[0])
+                uv_texture_gt_img = cv2.seamlessClone(uv_gt_img, uv_texture_img, uv_face_eye_mask_img, (128, 128), cv2.MIXED_CLONE)
+                # uv_texture_gt_img = util.remove_light(uv_texture_gt_img)
+                uv_texture_gt = util.image2tensor(cv2.cvtColor(uv_texture_gt_img, cv2.COLOR_BGR2RGB))
+                uv_texture_gt = uv_texture_gt.unsqueeze(0).to(self.device)
+                ##  eyegt
+                uv_texture_gt = uv_gt[:, :3, :, :] * self.uv_eye_mask + (uv_texture_gt[:, :3, :, :] * (1 - self.uv_eye_mask))
+
+                # image = images[0].cpu().numpy().transpose(1, 2, 0)
+                # landmark = landmarks2d[0].detach().cpu().numpy()
+                # uv_face_mask = util.get_image_hull_mask(image.shape, landmark)
+                # uv_face_mask = uv_face_mask.astype(np.float32) / 255.
+                # uv_face_mask = torch.from_numpy(uv_face_mask[:, :, 0])[None, None, :, :].contiguous()
+                # uv_face_mask = F.interpolate(uv_face_mask, [uv_gt.shape[2], uv_gt.shape[3]]).to(self.device)
+                # uv_face_mask_gt = F.grid_sample(uv_face_mask, uv_pverts.permute(0,2,3,1)[:,:,:,:2], mode='bilinear', align_corners=False)
+                # uv_face_eye_mask = uv_face_mask_gt.clone()
+                # uv_face_eye_mask[:,:,:45,:45] = self.uv_face_eye_mask[:,:,:45,:45]
+                # uv_face_eye_mask[:,:,:45,210:] = self.uv_face_eye_mask[:,:,:45,210:]
+                # uv_texture_gt = uv_gt[:, :3, :, :]*uv_face_eye_mask + (uv_texture[:, :3, :, :]*(1-uv_face_eye_mask))
+
+                ## merge
                 # uv_texture_gt = uv_gt[:,:3,:,:]*self.uv_face_eye_mask + (uv_texture[:,:3,:,:]*(1-self.uv_face_eye_mask))
+                ## bfm
                 # uv_texture_gt = uv_texture[:, :3, :, :]
+                ## gt
                 # uv_texture_gt = uv_gt[:, :3, :, :]
             else:
                 uv_texture_gt = uv_gt[:,:3,:,:]*self.uv_face_eye_mask + (torch.ones_like(uv_gt[:,:3,:,:])*(1-self.uv_face_eye_mask)*0.7)
 
             opdict['uv_texture_gt'] = uv_texture_gt
             visdict = {
-                'inputs': images, 
-                'landmarks2d': util.tensor_vis_landmarks(images, landmarks2d),
-                'landmarks3d': util.tensor_vis_landmarks(images, landmarks3d),
+                'inputs': images,
                 'shape_images': shape_images,
                 'shape_detail_images': shape_detail_images,
-                'uv_face_eye_mask': uv_face_eye_mask
+                'shading_images': uv_shading,
+                'landmarks2d': util.tensor_vis_landmarks(images, landmarks2d),
+                'landmarks3d': util.tensor_vis_landmarks(images, landmarks3d)
             }
 
             if self.cfg.model.use_tex:

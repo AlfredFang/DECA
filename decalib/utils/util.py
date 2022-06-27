@@ -616,6 +616,14 @@ def uneven_light_compensate(gray, block_size):
     return dst
 
 
+def remove_light(img):
+    block_size = 8
+    b, g, r = cv2.split(img)
+    dstb = uneven_light_compensate(b, block_size)
+    dstg = uneven_light_compensate(g, block_size)
+    dstr = uneven_light_compensate(r, block_size)
+    dst = cv2.merge([dstb, dstg, dstr])
+    return dst
 
 
 def get_image_hull_mask(image_shape, image_landmarks, ie_polys=None):
@@ -623,10 +631,9 @@ def get_image_hull_mask(image_shape, image_landmarks, ie_polys=None):
     if image_landmarks.shape[0] != 68:
         raise Exception(
             'get_image_hull_mask works only with 68 landmarks')
-    image_landmarks[..., 0] = image_landmarks[..., 0] * image_landmarks.shape[1] / 2 + image_landmarks.shape[1] / 2
-    image_landmarks[..., 1] = image_landmarks[..., 1] * image_landmarks.shape[0] / 2 + image_landmarks.shape[0] / 2
+    image_landmarks[..., 0] = image_landmarks[..., 0] * image_shape[1] / 2 + image_shape[1] / 2
+    image_landmarks[..., 1] = image_landmarks[..., 1] * image_shape[0] / 2 + image_shape[0] / 2
     int_lmrks = np.array(image_landmarks, dtype=np.int)
-    #hull_mask = np.zeros(image_shape[0:2]+(1,), dtype=np.float32)
     hull_mask = np.full(image_shape[0:2] + (1,), 0, dtype=np.float32)
     cv2.fillConvexPoly(hull_mask, cv2.convexHull(np.concatenate((int_lmrks[0:9], int_lmrks[17:18]))), (255, 255, 255))
     cv2.fillConvexPoly(hull_mask, cv2.convexHull(np.concatenate((int_lmrks[8:17], int_lmrks[26:27]))), (255, 255, 255))
@@ -640,16 +647,6 @@ def get_image_hull_mask(image_shape, image_landmarks, ie_polys=None):
     if ie_polys is not None:
         ie_polys.overlay_mask(hull_mask)
     return hull_mask
-
-
-def remove_light(img):
-    block_size = 8
-    b, g, r = cv2.split(img)
-    dstb = uneven_light_compensate(b, block_size)
-    dstg = uneven_light_compensate(g, block_size)
-    dstr = uneven_light_compensate(r, block_size)
-    dst = cv2.merge([dstb, dstg, dstr])
-    return dst
 
 
 def dict2obj(d):

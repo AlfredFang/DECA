@@ -47,7 +47,8 @@ def video2sequence(video_path, sample_step=10):
     return imagepath_list
 
 class TestData(Dataset):
-    def __init__(self, testpath, iscrop=True, crop_size=224, scale=1.25, face_detector='fan', sample_step=10):
+    ## resize
+    def __init__(self, testpath, iscrop=True, crop_size=224, scale=1.0, face_detector='fan', sample_step=10):
         '''
             testpath: folder, imagepath_list, image path, video path
         '''
@@ -84,10 +85,10 @@ class TestData(Dataset):
         '''
         if type=='kpt68':
             old_size = (right - left + bottom - top)/2*1.1
-            center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0 ])
+            center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0 - old_size*0.01])
         elif type=='bbox':
             old_size = (right - left + bottom - top)/2
-            center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0  + old_size*0.12])
+            center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0 + old_size*0.12])
         else:
             raise NotImplementedError
         return old_size, center

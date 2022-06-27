@@ -222,7 +222,7 @@ class SRenderY(nn.Module):
         '''
         -- Texture Rendering
         vertices: [batch_size, V, 3], vertices in world space, for calculating normals, then shading
-        transformed_vertices: [batch_size, V, 3], range:normalized to [-1,1], projected vertices in image space (that is aligned to the iamge pixel), for rasterization
+        transformed_vertices: [batch_size, V, 3], range:normalized to [-1,1], projected vertices in image space (that is aligned to the image pixel), for rasterization
         albedos: [batch_size, 3, h, w], uv map
         lights: 
             spherical homarnic: [N, 9(shcoeff), 3(rgb)]
