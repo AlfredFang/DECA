@@ -340,6 +340,10 @@ class DECA(nn.Module):
                         dense_vertices, 
                         dense_faces,
                         colors = dense_colors,
+                        # texture=texture,
+                        # normal_map=normal_map,
+                        # uvcoords=uvcoords,
+                        # uvfaces=uvfaces,
                         inverse_face_order=True)
     
     def run(self, imagepath, iscrop=True):

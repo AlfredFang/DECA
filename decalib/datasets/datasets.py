@@ -48,7 +48,7 @@ def video2sequence(video_path, sample_step=10):
 
 class TestData(Dataset):
     ## resize
-    def __init__(self, testpath, iscrop=True, crop_size=224, scale=1.0, face_detector='fan', sample_step=10):
+    def __init__(self, testpath, iscrop=True, crop_size=224, scale=1.25, face_detector='fan', sample_step=10):
         '''
             testpath: folder, imagepath_list, image path, video path
         '''
@@ -71,8 +71,8 @@ class TestData(Dataset):
         self.resolution_inp = crop_size
         if face_detector == 'fan':
             self.face_detector = detectors.FAN()
-        # elif face_detector == 'mtcnn':
-        #     self.face_detector = detectors.MTCNN()
+        elif face_detector == 'mtcnn':
+            self.face_detector = detectors.MTCNN()
         else:
             print(f'please check the detector: {face_detector}')
             exit()
@@ -85,7 +85,7 @@ class TestData(Dataset):
         '''
         if type=='kpt68':
             old_size = (right - left + bottom - top)/2*1.1
-            center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0 - old_size*0.01])
+            center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0])
         elif type=='bbox':
             old_size = (right - left + bottom - top)/2
             center = np.array([right - (right - left) / 2.0, bottom - (bottom - top) / 2.0 + old_size*0.12])
@@ -134,7 +134,7 @@ class TestData(Dataset):
         
         DST_PTS = np.array([[0,0], [0,self.resolution_inp - 1], [self.resolution_inp - 1, 0]])
         tform = estimate_transform('similarity', src_pts, DST_PTS)
-        
+
         image = image/255.
 
         dst_image = warp(image, tform.inverse, output_shape=(self.resolution_inp, self.resolution_inp))

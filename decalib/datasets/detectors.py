@@ -44,6 +44,7 @@ class MTCNN(object):
         from facenet_pytorch import MTCNN as mtcnn
         self.device = device
         self.model = mtcnn(keep_all=True)
+
     def run(self, input):
         '''
         image: 0-255, uint8, rgb, [h, w, 3]
@@ -55,6 +56,3 @@ class MTCNN(object):
         else:
             bbox = out[0][0].squeeze()
             return bbox, 'bbox'
-
-
-

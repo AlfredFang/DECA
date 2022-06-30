@@ -78,10 +78,12 @@ def write_obj(obj_name,
     Args:
         obj_name: str
         vertices: shape = (nver, 3)
-        colors: shape = (nver, 3)
         faces: shape = (ntri, 3)
+        colors: shape = (nver, 3)
         texture: shape = (uv_size, uv_size, 3)
         uvcoords: shape = (nver, 2) max value<=1
+        uvfaces: shape = (ntri, 3)
+        normal_map: shape = (uv_size, uv_size, 3)
     '''
     if os.path.splitext(obj_name)[-1] != '.obj':
         obj_name = obj_name + '.obj'
